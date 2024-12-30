@@ -1,0 +1,14 @@
+@model LoginViewModel
+
+<form asp-action="Login" method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="form-group">
+        <label for="Email">Email</label>
+        <input type="email" asp-for="Email" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label for="Password">Password</label>
+        <input type="password" asp-for="Password" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+</form>

@@ -1,0 +1,34 @@
+.custom-card {
+    height: 400px; 
+    width: 100%;  
+    max-width: 300px; 
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-card img {
+    height: 250px; 
+    object-fit: cover; 
+    width: 100%; 
+}
+
+.card-body {
+    flex-grow: 1; 
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    margin-bottom: 0.8rem;
+}
+
+.card-text {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card-body .btn {
+    margin-top: auto; 
+}

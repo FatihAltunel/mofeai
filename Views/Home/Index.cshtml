@@ -1,0 +1,85 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+    var movies = ViewBag.Movies as List<Movie>;
+}
+
+<div class="text-center mt-5">
+    @{
+        if (User.Identity != null && User.Identity.IsAuthenticated)
+        {
+            <h1 class="display-4">Welcome, @User.Identity.Name!</h1>
+            <div class="mt-4">
+                <form id="searchForm" method="post" asp-action="GetMoreThanOneResult" asp-controller="OpenAi">
+                    <div class="input-group input-group-lg">
+                        <input type="text" name="prompt" class="form-control" placeholder="Search for movies..." aria-label="Search" value="@ViewBag.Prompt">
+                        <div class="input-group-append">
+                            <button class="btn btn-warning btn-lg" style="transition: box-shadow 0.3s ease;" type="submit">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <h1 class="display-4">Welcome to MOFE-AI</h1>
+
+            <div class="mt-4">
+                <div class="alert alert-info">
+                    <strong>Notice:</strong> As a logged-in user, you can get up to 10 movie recommendations.
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <form id="searchForm" method="post" asp-action="GetResult" asp-controller="OpenAi">
+                    <div class="input-group input-group-lg">
+                        <input type="text" name="prompt" class="form-control" placeholder="Search for movies..." value="@ViewBag.Prompt" aria-label="Search">
+                        <div class="input-group-append">
+                            <button class="btn btn-warning btn-lg" style="transition: box-shadow 0.3s ease; margin-left: 10px;" type="submit">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        }
+
+          <div id="loading" class="mt-4" style="display: none;">
+            <div class="spinner-border text-warning" role="status"></div>
+            <span class="text-muted">We're searching movies for you! this action may take up to 30 seconds.</span>
+        </div>
+
+        @if (movies != null && movies.Any()){
+
+            <div class="container mt-4">
+                <div class="row">
+
+            @foreach (var movie in movies)
+            {
+                <div class="col-12 col-sm-6 col-md-4 col-lg-4 mb-4 d-flex align-items-stretch">
+                    <div class="card shadow custom-card">
+                        <img src="@movie.ImageUrl" class="card-img-top" alt="Movie Image" 
+                             onerror="this.src='/images/ErrorFilm.png';">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@movie.Title</h5>
+                            <p class="card-text">
+                                <strong>Rating:</strong> @movie.Rating<br>
+                                <strong>Genre:</strong> @movie.Genre
+                            </p>
+                            <a href="@Url.Action("Login", "Account")" class="btn btn-warning text-white mt-auto">
+                                Sign In
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function () {
+            document.getElementById('loading').style.display = 'block'; 
+        });
+    </script>
+}
