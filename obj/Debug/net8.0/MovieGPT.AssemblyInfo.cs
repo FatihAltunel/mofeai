@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MovieGPT")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d39c5267cf8a1a9b1508b8d6a27f2fcc5f196e44")]
 [assembly: System.Reflection.AssemblyProductAttribute("MovieGPT")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MovieGPT")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
