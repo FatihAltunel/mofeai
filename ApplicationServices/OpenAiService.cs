@@ -8,7 +8,8 @@ namespace MovieGPT.ApplicationServices
     
 public class OpenAiService
 {
-    private readonly HttpClient _httpClient;
+    
+    protected internal HttpClient _httpClient;
 
     public OpenAiService(string apiKey)
     {

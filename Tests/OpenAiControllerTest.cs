@@ -1,80 +1,156 @@
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 using Moq;
-using MovieGPT.ApplicationServices;
+using Moq.Protected;
 using Xunit;
 
-public class OpenAiControllerTests
+namespace MovieGPT.ApplicationServices.Tests
 {
-    private readonly Mock<OpenAiService> _mockOpenAiService;
-    private readonly OpenAiController _controller;
-
-    public OpenAiControllerTests()
+    public class OpenAiServiceTests
     {
-        _mockOpenAiService = new Mock<OpenAiService>();
-        _controller = new OpenAiController(_mockOpenAiService.Object);
-    }
+        private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+        private readonly OpenAiService _openAiService;
 
-    [Fact]
-    public async Task GetResult_Should_Return_View_With_Movie()
-    {
-        // Arrange
-        var prompt = "Find a movie";
-        var fakeMovie = new Movie { Title = "Inception", Genre = "Sci-Fi" };
-        var fakeResult = JsonSerializer.Serialize(fakeMovie);
-
-        _mockOpenAiService.Setup(service => service.GetResult(prompt))
-            .ReturnsAsync(fakeResult);
-
-        // Act
-        var result = await _controller.GetResult(prompt);
-
-        // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var movies = Assert.IsType<List<Movie>>(viewResult.ViewData["Movies"]);
-        Assert.Single(movies);
-        Assert.Equal("Inception", movies[0].Title);
-    }
-
-    [Fact]
-    public async Task GetResult_Should_Return_View_With_Empty_Movie_When_Null()
-    {
-        // Arrange
-        var prompt = "Find a movie";
-        _mockOpenAiService.Setup(service => service.GetResult(prompt))
-            .ReturnsAsync("null");
-
-        // Act
-        var result = await _controller.GetResult(prompt);
-
-        // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.IsType<Movie>(viewResult.ViewData["Movie"]);
-        Assert.Null(viewResult.ViewData["Movies"]);
-    }
-
-    [Fact]
-    public async Task GetMoreThanOneResult_Should_Return_View_With_Movies()
-    {
-        // Arrange
-        var prompt = "Find multiple movies";
-        var fakeMovies = new List<Movie>
+        public OpenAiServiceTests()
         {
-            new Movie { Title = "Inception", Genre = "Sci-Fi" },
-            new Movie { Title = "The Dark Knight", Genre = "Action" }
-        };
-        var fakeResult = JsonSerializer.Serialize(fakeMovies);
+            _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
+            _openAiService = new OpenAiService("test-api-key")
+            {
+                _httpClient = httpClient
+            };
+        }
 
-        _mockOpenAiService.Setup(service => service.GetMoreThanOneResult(prompt))
-            .ReturnsAsync(fakeResult);
+        [Fact]
+        public async Task GetCompletionAsync_ShouldReturnValidResponse_WhenApiCallSucceeds()
+        {
+            // Arrange
+            var expectedResponse = "{\"choices\":[{\"message\":{\"content\":\"test-response\"}}]}";
 
-        // Act
-        var result = await _controller.GetMoreThanOneResult(prompt);
+            _httpMessageHandlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(expectedResponse, Encoding.UTF8, "application/json")
+                });
 
-        // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var movies = Assert.IsType<List<Movie>>(viewResult.ViewData["Movies"]);
-        Assert.Equal(2, movies.Count);
-        Assert.Equal("Inception", movies[0].Title);
+            // Act
+            var result = await _openAiService.GetCompletionAsync("test-prompt");
+
+            // Assert
+            Assert.Equal("test-response", result);
+        }
+
+        [Fact]
+        public async Task GetCompletionAsync_ShouldReturnErrorMessage_WhenApiCallFails()
+        {
+            // Arrange
+            _httpMessageHandlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.BadRequest
+                });
+
+            // Act
+            var result = await _openAiService.GetCompletionAsync("test-prompt");
+
+            // Assert
+            Assert.Equal("Error: BadRequest", result);
+        }
+
+        [Fact]
+        public async Task GetResult_ShouldReturnValidMovieJson_WhenApiCallSucceeds()
+        {
+            // Arrange
+            var apiResponse = "{\"choices\":[{\"message\":{\"content\":\"{\\\"Movie title\\\":\\\"Inception\\\",\\\"Genre\\\":\\\"Sci-Fi\\\",\\\"Rating\\\":8.8,\\\"Image URL\\\":\\\"https://wikipedia.org/Inception.jpg\\\"}\"}}]}";
+
+            _httpMessageHandlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(apiResponse, Encoding.UTF8, "application/json")
+                });
+
+            // Act
+            var result = await _openAiService.GetResult("Inception");
+
+            // Assert
+            Assert.Contains("\"Movie title\":\"Inception\"", result);
+        }
+
+        [Fact]
+        public async Task GetMoreThanOneResult_ShouldReturnValidMoviesJson_WhenApiCallSucceeds()
+        {
+            // Arrange
+            var apiResponse = "{\"choices\":[{\"message\":{\"content\":\"[{\\\"Movie title\\\":\\\"Inception\\\",\\\"Genre\\\":\\\"Sci-Fi\\\",\\\"Rating\\\":8.8,\\\"Image URL\\\":\\\"https://wikipedia.org/Inception.jpg\\\"}]\"}}]}";
+
+            _httpMessageHandlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(apiResponse, Encoding.UTF8, "application/json")
+                });
+
+            // Act
+            var result = await _openAiService.GetMoreThanOneResult("Inception");
+
+            // Assert
+            Assert.Contains("\"Movie title\":\"Inception\"", result);
+        }
+
+        [Fact]
+        public async Task GetMoreThanOneResult_ShouldReturnEmptyMoviesJson_WhenApiCallFails()
+        {
+            // Arrange
+            _httpMessageHandlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.BadRequest
+                });
+
+            // Act
+            var result = await _openAiService.GetMoreThanOneResult("Inception");
+
+            // Assert
+            Assert.Equal("[]", result);
+        }
+    }
+
+    public class Movie
+    {
+        public string MovieTitle { get; set; } = "";
+        public string Genre { get; set; } = "";
+        public double Rating { get; set; } = 0.0;
+        public string ImageUrl { get; set; } = "";
     }
 }
